@@ -23,7 +23,21 @@ public class Vehicle
 	
 	public boolean HappyWithSpeed()
 	{
-		//TODO: Decide if we want a better function for this
+		//TODO: Decide if we want a better function for this		
 		return desVel == curVel;
+	}
+	
+	@Override
+	public String toString()
+	{
+		if(HappyWithSpeed())
+		{
+			return img.toUpperCase();
+		}
+		else
+		{
+			System.err.printf("Vehicle %s is not happy! desVel = %d, curVel = %d\n", img.toLowerCase(), desVel, curVel);
+			return img.toLowerCase();
+		}
 	}
 }
