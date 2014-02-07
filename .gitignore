@@ -4,7 +4,3 @@
 *.jar
 *.war
 *.ear
-
-#Stuff that I should clean from my computer, but am holding on to for now.
-*.png
-*.py
