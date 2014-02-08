@@ -8,7 +8,7 @@ screen = pygame.display.set_mode((1024, 768))
 clock = pygame.time.Clock()
 
 TOTAL_LANES = 2
-THRESHOLD = 0.1
+THRESHOLD = .25
 
 #Since a car is 5 pixels wide, we will define a lane as 9 pixels
 #Lane centers will start at y = 5 (then 24, 33, 42...)
@@ -46,11 +46,6 @@ class CarSprite(pygame.sprite.Sprite):
   def update(self, deltat, carGroup, passNo):
     # SIMULATION
     print("Updating " + self.name + ". Pass " + str(passNo))
-    if(self.name == "Car1"):
-      print(self.curLane)
-      print(self.targetLane)
-      #print(self.xpos, self.ypos)
-      print(self.curVel, self.desVel)
     
     self.curLane = int(round((self.ypos - 5) / 9))
       
@@ -65,34 +60,44 @@ class CarSprite(pygame.sprite.Sprite):
       print(accels)
 
       which = accels.index(max(accels))
-      print("Largest " + str(which))
       
       if(which == 0 and accels[0] - accels[1] > THRESHOLD):
         #Merge left
         self.targetLane = self.curLane - 1
         self.curAcc = accels[0]
+        print("Switching left")
       elif(which == 2 and accels[2] - accels[1] > THRESHOLD):
         self.targetLane = self.curLane + 1
         self.curAcc = accels[2]
+        print("Switching right")
       else:
         self.targetLane = self.curLane
         self.curAcc = accels[1]
+        print("Staying put")
         
       self.curVel = self.curVel + self.curAcc
         
     else:      
       self.xpos = self.xpos + self.curVel
-      self.ypos = self.curLane * 9 + 5
+      #self.ypos = self.curLane * 9 + 5
       
       if(self.curLane > self.targetLane):
         self.ypos = self.ypos - 9
+        self.curLane = self.targetLane
       elif(self.curLane < self.targetLane):
         self.ypos = self.ypos + 9
+        self.curLane = self.targetLane
 
       self.rect = self.src_image.get_rect()
       self.rect.centerx = self.xpos
       self.rect.centery = self.ypos
       self.image = self.src_image
+      
+    if(self.name == "Car1"):
+      print(self.curLane)
+      print(self.targetLane)
+      #print(self.xpos, self.ypos)
+      print(self.curVel, self.desVel)
     
   def findNears(self, carGroup):
     #We now want a list with 6 elements: nearestAheadLeft, nearestBehindLeft, nearestAheadSame, nearestBehindSame, nearestAheadRight, nearestBehindRight
@@ -107,7 +112,7 @@ class CarSprite(pygame.sprite.Sprite):
     for car in carGroup:
       if(car == self): continue
       dist = car.xpos - self.xpos
-      if(car.curLane == self.curLane + 1 or car.targetLane == self.curLane + 1):
+      if(car.curLane == self.curLane - 1 or car.targetLane == self.curLane - 1):
         if(car.xpos >= self.xpos):
           if(dist < dists[0]):
             nears[0] = car
@@ -125,7 +130,7 @@ class CarSprite(pygame.sprite.Sprite):
           if(dist < dists[3]):
             nears[3] = car
             dists[3] = dist
-      elif(car.curLane == self.curLane - 1 or car.targetLane == self.curLane - 1):
+      elif(car.curLane == self.curLane + 1 or car.targetLane == self.curLane + 1):
         if(car.xpos >= self.xpos):
           if(dist < dists[4]):
             nears[4] = car
@@ -134,6 +139,13 @@ class CarSprite(pygame.sprite.Sprite):
           if(dist < dists[5]):
             nears[5] = car
             dists[5] = dist
+    
+    if(nears[0] != None): print ("Returning left: " + nears[0].name)
+    else: print("None on left")
+    if(nears[2] != None): print ("Returning center: " + nears[2].name)
+    else: print("None on center")
+    if(nears[4] != None): print ("Returning right: " + nears[4].name)
+    else: print("None on right")
     
     return nears
     
@@ -182,7 +194,7 @@ class CarSprite(pygame.sprite.Sprite):
 # Make a couple of cars
 #img, xPos, yPos, startVel, desVel, DMG, comfortBrake, politeness, minSpace, DTH, l, maxAcc):
 car1 = CarSprite('car1.png', 50, 14, 30, 35, 2, 3, 1, 2, 1.5, 1, 1, "Car1") #Red
-car2 = CarSprite('car2.png', 200, 14, 24, 25, 2, 3, 1, 2, 1.5, 1, 1, "Car2") #Blue
+car2 = CarSprite('car2.png', 200, 14, 24, 35, 2, 3, 1, 2, 1.5, 1, 1, "Car2") #Blue
 car3 = CarSprite('car3.png', 350, 14, 21, 25, 2, 3, 1, 2, 1.5, 1, 1, "Car3") #Green
 
 cars = [car1, car2, car3]
@@ -193,7 +205,7 @@ car_group = pygame.sprite.RenderPlain(*cars);
 
 while 1:
   # USER INPUT
-  deltat = clock.tick(1)
+  deltat = clock.tick(25)
   
   print("TICK")
   for event in pygame.event.get():
@@ -208,4 +220,5 @@ while 1:
   car_group.update(deltat, car_group, 1)
   car_group.draw(screen)
   pygame.display.flip()
+  print("")
 
