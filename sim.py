@@ -32,7 +32,7 @@ class CarSprite(pygame.sprite.Sprite):
   def __init__(self, image, xposition, yposition, startVelocity, desiredVelocity, desiredMinGap, comfortableBraking, politeness, minSpace, desTimeHead, length, maxAcceleration, name):
     pygame.sprite.Sprite.__init__(self)
     self.src_image = pygame.image.load(image)
-    print(name, xposition, yposition)
+    #print(name, xposition, yposition)
     self.xpos = xposition
     self.ypos = yposition
     
@@ -66,7 +66,7 @@ class CarSprite(pygame.sprite.Sprite):
     #self.curLane = int(round((self.ypos - 5) / 9))
     
     if((self.ypos - 5) % 9 == 0):
-      self.curLane = int(round((self.ypos - 5) / 9))
+      self.curLane = int(round(((self.ypos % 150) - 5) / 9))
       #self.targetLane = self.curLane
       
     if(self.xpos <= -200 or self.ypos >= 1000 or self.ypos <= -200):
@@ -75,11 +75,12 @@ class CarSprite(pygame.sprite.Sprite):
       
     if(self.xpos >= XLIMIT):
       self.xpos = self.xpos - XLIMIT
+      self.ypos = self.ypos + 150
     
     if(passNo == 0):
       nears = self.findNears(carGroup)
 
-      accels = self.calcAccels(nears)
+      accels = self.calcAccels(nears, carGroup)
       #print(accels)
 
       which = accels.index(max(accels))
@@ -149,11 +150,11 @@ class CarSprite(pygame.sprite.Sprite):
         #self.curLane = self.targetLane
       
       
-      print(self.name)
+      #print(self.name)
       self.rect = self.src_image.get_rect()
-      print(self.xpos, int(self.xpos))
+      #print(self.xpos, int(self.xpos))
       self.rect.centerx = int(self.xpos)
-      print(self.ypos, int(self.ypos))
+      #print(self.ypos, int(self.ypos))
       self.rect.centery = int(self.ypos)
       self.image = self.src_image
       
@@ -163,6 +164,9 @@ class CarSprite(pygame.sprite.Sprite):
     #print(self.xpos, self.ypos)
     print(self.curVel, self.desVel)
     '''
+    
+    if(math.fabs(self.curVel) > 1000000):
+      carGroup.remove(self)
     
   def findNears(self, carGroup):
     #We now want a list with 6 elements: nearestAheadLeft, nearestBehindLeft, nearestAheadSame, nearestBehindSame, nearestAheadRight, nearestBehindRight
@@ -216,7 +220,7 @@ class CarSprite(pygame.sprite.Sprite):
     
     return nears
     
-  def calcAccels(self, nears):
+  def calcAccels(self, nears, carGroup):
     accels = [0 for x in range(3)]
     
     if(self.curLane == 0):
@@ -225,12 +229,12 @@ class CarSprite(pygame.sprite.Sprite):
       if(nears[0] == None):
         accels[0] = self.calcAccelFree()
       else:
-        accels[0] = self.calcAccelInt(nears[0])
+        accels[0] = self.calcAccelInt(nears[0], carGroup)
       
     if(nears[2] == None):
       accels[1] = self.calcAccelFree()
     else:
-      accels[1] = self.calcAccelInt(nears[2]);
+      accels[1] = self.calcAccelInt(nears[2], carGroup);
     
     if(self.curLane == TOTAL_LANES - 1):
       accels[2] = -sys.maxint
@@ -238,7 +242,7 @@ class CarSprite(pygame.sprite.Sprite):
       if(nears[4] == None):
         accels[2] = self.calcAccelFree()
       else:
-        accels[2] = self.calcAccelInt(nears[4]);
+        accels[2] = self.calcAccelInt(nears[4], carGroup);
       
     return accels
     
@@ -247,11 +251,19 @@ class CarSprite(pygame.sprite.Sprite):
     #print("Returning " + str(self.maxAccel * (1 - ((self.curVel / self.desVel) ** 4))))
     return self.maxAccel * (1 - ((self.curVel / self.desVel) ** 4))
   
-  def calcAccelInt(self, near):
+  def calcAccelInt(self, near, carGroup):
     #print("In calcAccelInt")
     #if(near.curVel < 0):
       
     delvalpha = self.curVel - near.curVel
+    
+    '''
+    if(math.fabs(delvalpha) > 1000):
+      print("Removing from calcAccelInt")
+      carGroup.remove(self)
+      return 0
+    '''
+    
     #sstar = self.minSpacing + (self.curVel * self.desTimeHeadway) + ((self.curVel * delvalpha) / (2 * math.sqrt(self.maxAccel * self.comfortBrake)));
     #print("self: " + str(self.curVel) + " near: " + str(near.curVel) + " " + near.name)
     #print ("delvalpha :" + str(delvalpha))
@@ -328,7 +340,7 @@ while 1:
   # USER INPUT
   deltat = clock.tick(30)
   
-  if(addIdx % 30 == 0 and len(cars) < 100):
+  if(addIdx % 10 == 0 and len(cars) < 1000):
     car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), 5 + random.randrange(9, 9 * TOTAL_LANES, 9), random.randint(25, 45) / TIMEWARP, random.randint(25, 45) / TIMEWARP, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
     cars.append(car)
     car_group = pygame.sprite.RenderPlain(*cars)
