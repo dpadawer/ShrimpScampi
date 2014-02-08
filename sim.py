@@ -4,11 +4,15 @@
 # INTIALISATION
 import pygame, math, sys
 from pygame.locals import *
-screen = pygame.display.set_mode((1024, 768))
+screen = pygame.display.set_mode((1920, 760), FULLSCREEN)
 clock = pygame.time.Clock()
 
 TOTAL_LANES = 2
-THRESHOLD = .25
+THRESHOLD = .1
+LTORBIAS = 0
+RTOLBIAS = 0
+XLIMIT = 2500
+EPSILON = .01
 
 #Since a car is 5 pixels wide, we will define a lane as 9 pixels
 #Lane centers will start at y = 5 (then 24, 33, 42...)
@@ -49,7 +53,7 @@ class CarSprite(pygame.sprite.Sprite):
     
     self.curLane = int(round((self.ypos - 5) / 9))
       
-    if(self.xpos >= 1200 or self.xpos <= -200 or self.ypos >= 1000 or self.ypos <= -200):
+    if(self.xpos >= XLIMIT or self.xpos <= -200 or self.ypos >= 1000 or self.ypos <= -200):
       carGroup.remove(self)
       return
     
@@ -61,16 +65,44 @@ class CarSprite(pygame.sprite.Sprite):
 
       which = accels.index(max(accels))
       
-      if(which == 0 and accels[0] - accels[1] > THRESHOLD):
+      '''
+      if(accels[1] == accels[2]):
+        #Merge right
+        self.targetLane = self.curLane + 1
+        self.curAcc = accels[2]
+      elif(which == 0 and accels[0] - accels[1] > THRESHOLD - RTOLBIAS):
         #Merge left
         self.targetLane = self.curLane - 1
         self.curAcc = accels[0]
         print("Switching left")
-      elif(which == 2 and accels[2] - accels[1] > THRESHOLD):
+      elif(which == 2 and accels[2] - accels[1] > THRESHOLD - LTORBIAS):
+        #Merge right
         self.targetLane = self.curLane + 1
         self.curAcc = accels[2]
         print("Switching right")
       else:
+        self.targetLane = self.curLane
+        self.curAcc = accels[1]
+        print("Staying put")
+      '''
+      
+      if(accels[0] - accels[1] > THRESHOLD - RTOLBIAS):
+        #Merge left
+        self.targetLane = self.curLane - 1
+        self.curAcc = accels[0]
+        print("Switching left")
+      elif(math.fabs(accels[0] - accels[2]) < EPSILON):
+        #Don't bother
+        self.targetLane = self.curLane
+        self.curAcc = accels[1]
+        print("Staying put")
+      elif(accels[2] - accels[1] > THRESHOLD - LTORBIAS):
+        #Merge right
+        self.targetLane = self.curLane + 1
+        self.curAcc = accels[2]
+        print("Switching right")
+      else:
+        #Don't bother
         self.targetLane = self.curLane
         self.curAcc = accels[1]
         print("Staying put")
@@ -93,11 +125,10 @@ class CarSprite(pygame.sprite.Sprite):
       self.rect.centery = self.ypos
       self.image = self.src_image
       
-    if(self.name == "Car1"):
-      print(self.curLane)
-      print(self.targetLane)
-      #print(self.xpos, self.ypos)
-      print(self.curVel, self.desVel)
+    print("Current lane: " + str(self.curLane))
+    print("Target lane: " + str(self.targetLane))
+    #print(self.xpos, self.ypos)
+    print(self.curVel, self.desVel)
     
   def findNears(self, carGroup):
     #We now want a list with 6 elements: nearestAheadLeft, nearestBehindLeft, nearestAheadSame, nearestBehindSame, nearestAheadRight, nearestBehindRight
@@ -186,6 +217,10 @@ class CarSprite(pygame.sprite.Sprite):
     sstar = self.minSpacing + (self.curVel * self.desTimeHeadway) + ((self.curVel * delvalpha) / (2 * math.sqrt(self.maxAccel * self.comfortBrake)));
     salpha = near.xpos - self.xpos - near.length
     
+    #It's not safe, so we're allowed to do this
+    if(salpha == 0):
+      return -sys.maxint
+    
     freeAccel = self.calcAccelFree()
     
     #print("Returning " + str(-self.maxAccel * ((sstar / salpha) ** 2)))
@@ -194,8 +229,8 @@ class CarSprite(pygame.sprite.Sprite):
 # Make a couple of cars
 #img, xPos, yPos, startVel, desVel, DMG, comfortBrake, politeness, minSpace, DTH, l, maxAcc):
 car1 = CarSprite('car1.png', 50, 14, 30, 35, 2, 3, 1, 2, 1.5, 1, 1, "Car1") #Red
-car2 = CarSprite('car2.png', 200, 14, 24, 35, 2, 3, 1, 2, 1.5, 1, 1, "Car2") #Blue
-car3 = CarSprite('car3.png', 350, 14, 21, 25, 2, 3, 1, 2, 1.5, 1, 1, "Car3") #Green
+car2 = CarSprite('car2.png', 150, 14, 24, 35, 2, 3, 1, 2, 1.5, 1, 1, "Car2") #Blue
+car3 = CarSprite('car3.png', 250, 14, 21, 25, 2, 3, 1, 2, 1.5, 1, 1, "Car3") #Green
 
 cars = [car1, car2, car3]
 #cars = [car1]
