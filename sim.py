@@ -58,7 +58,7 @@ class CarSprite(pygame.sprite.Sprite):
     
     
   def __repr__(self):
-    return self.name + ": Pos: " + str((self.xpos, self.ypos)) + "; curVel, desVel: " + str((self.curVel, self.desVel))
+    return self.name + "={Pos: " + str((self.xpos, self.ypos)) + "; curVel, desVel: " + str((self.curVel, self.desVel)) + "; curLane, taretLane: " + str((self.curLane, self.targetLane)) + "}"
     
     
   #Problem: if we update acc, vel, and pos all in one pass, there is simultaneousness being removed
@@ -66,7 +66,7 @@ class CarSprite(pygame.sprite.Sprite):
   #We claim this is valid (with regards to possesing a lane) since people (hopefully) use their blinker
   def update(self, deltat, carGroup, passNo):
     # SIMULATION
-    #print("Updating " + self.__repr__() + ". Pass " + str(passNo))
+    print("Updating " + self.__repr__() + ". Pass " + str(passNo))
     
     #self.curLane = int(round((self.ypos - 5) / 9))
     
@@ -80,32 +80,39 @@ class CarSprite(pygame.sprite.Sprite):
       return
       
     if(self.xpos >= XLIMIT):
+      carGroup.remove(self)
+      return
+      '''
       self.xpos = self.xpos - XLIMIT
       self.ypos = self.ypos + 150
+      '''
     
     if(passNo == 0):
       nears = self.findNears(carGroup)
-
+      print(nears)
+      
+      
       accels = self.calcAccels(nears, carGroup)
-      #print(accels)
+      print(accels)
 
       which = accels.index(max(accels))
+      print("Desired is " + str(which))
       
       if(which == 2 and self.isSafe(nears[4], nears[5], SAFETYCRIT)):
         #Merge right
         self.targetLane = self.curLane + 1
         self.curAcc = accels[2]
-        #print("Switching right")
+        print("Switching right")
       elif(which == 0 and self.isSafe(nears[0], nears[1], SAFETYCRIT)):
         #Merge left
         self.targetLane = self.curLane - 1
         self.curAcc = accels[0]
-        #print("Switching left")
+        print("Switching left")
       else:
         #Don't bother
         self.targetLane = self.curLane
         self.curAcc = accels[1]
-        #print("Staying put")
+        print("Staying put")
       
         
       self.curVel = self.curVel + self.curAcc
@@ -146,7 +153,9 @@ class CarSprite(pygame.sprite.Sprite):
     print(self.curVel, self.desVel)
     '''
     
-    #print("Finished updating " + self.__repr__())
+    print("Finished updating " + self.__repr__())
+    if(self.curVel < 0):
+      sys.exit(0)
     
     if(math.fabs(self.curVel) > 1000000):
       carGroup.remove(self)
@@ -237,7 +246,8 @@ class CarSprite(pygame.sprite.Sprite):
     #print("self: " + self.__repr__())
     #print("near: " + near.__repr__())
       
-    delvalpha = self.curVel - near.curVel
+    #delvalpha = self.curVel - near.curVel
+    delvalpha = near.curVel - self.curVel
     if(math.fabs(delvalpha) > 250):
       print("dangerous delvalpha found: self: " + self.__repr__() + "; near: " + near.__repr__())
     #print("self.curVel: " + str(self.curVel) + ", near.curVel: " + str(near.curVel))
@@ -245,7 +255,7 @@ class CarSprite(pygame.sprite.Sprite):
     #sstar = self.minSpacing + (self.curVel * self.desTimeHeadway) + ((self.curVel * delvalpha) / (2 * math.sqrt(self.maxAccel * self.comfortBrake)));
     #print("self: " + str(self.curVel) + " near: " + str(near.curVel) + " " + near.name)
     #print ("delvalpha :" + str(delvalpha))
-    sstar = self.minSpacing + (self.curVel * self.desTimeHeadway) + math.exp((delvalpha) / (2 * self.desTimeHeadway * math.sqrt(self.maxAccel * self.comfortBrake)))
+    sstar = self.minSpacing + (self.curVel * self.desTimeHeadway) * math.exp((delvalpha) / (2 * self.desTimeHeadway * math.sqrt(self.maxAccel * self.comfortBrake)))
     salpha = near.xpos - self.xpos - near.length
       
     if(salpha == 0):
@@ -317,8 +327,9 @@ while 1:
   deltat = clock.tick(30)
   
   
-  if(addIdx % 10 == 0 and len(cars) < 1000):
-    car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), random.randrange(9, 9 * TOTAL_LANES, 9), random.randint(25, 45) / TIMEWARP, random.randint(25, 45) / TIMEWARP, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
+  if(addIdx % 4 == 0 and len(cars) < 1000):
+    startVel = random.randint(35, 45) / TIMEWARP
+    car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), random.randrange(9, 9 * TOTAL_LANES, 9), startVel, startVel + (random.randint(-3, 3) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
     cars.append(car)
     car_group = pygame.sprite.RenderPlain(*cars)
   
