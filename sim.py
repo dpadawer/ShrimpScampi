@@ -8,7 +8,7 @@ from pygame.locals import *
 screen = pygame.display.set_mode((1920, 760), FULLSCREEN)
 clock = pygame.time.Clock()
 
-TOTAL_LANES = 10
+TOTAL_LANES = 3
 THRESHOLD = .1
 LTORBIAS = .5
 RTOLBIAS = -.75
@@ -308,22 +308,23 @@ class CarSprite(pygame.sprite.Sprite):
   
 # Make a couple of cars
 #img, xPos, yPos, startVel, desVel, DMG, comfortBrake, politeness, minSpace, DTH, l, maxAcc):
-'''
-car1 = CarSprite('car1.png', 50, 14, 30, 35, 2, 3, 1, 5, 1.5, 1, 1, "Car1") #Red
-car2 = CarSprite('car2.png', 150, 14, 24, 35, 2, 3, 1, 5, 1.5, 1, 1, "Car2") #Blue
-car3 = CarSprite('car3.png', 250, 14, 21, 25, 2, 3, 1, 5, 1.5, 1, 1, "Car3") #Green
-'''
+
+car1 = CarSprite('car1.png', 50, 23, 30, 35, 10, 3, 1, 5, 1.5, 10, 1, "Car1") #Red
+car2 = CarSprite('car2.png', 100, 23, 24, 35, 10, 3, 1, 5, 1.5, 10, 1, "Car2") #Blue
+car3 = CarSprite('car3.png', 150, 23, 21, 25, 10, 3, 1, 5, 1.5, 10, 1, "Car3") #Green
+
 
 '''
 car1 = CarSprite('car1.png', 50, 14, 25, 60, 2, 3, 1, 5, 1.5, 1, 1, "Car1") #Red
 car2 = CarSprite('car2.png', 100, 14, 25, 30, 2, 3, 1, 5, 1.5, 1, 1, "Car2") #Blue
 car3 = CarSprite('car3.png', 150, 14, 25, 30, 2, 3, 1, 5, 1.5, 1, 1, "Car3") #Green
 
-cars = [car1, car2, car3]
+
 #cars = [car1]
 '''
 
-cars = []
+#cars = []
+cars = [car1, car2, car3]
 
 
 '''
@@ -340,12 +341,14 @@ while 1:
   # USER INPUT
   deltat = clock.tick(30)
   
+  '''
   if(addIdx % 10 == 0 and len(cars) < 1000):
     car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), 5 + random.randrange(9, 9 * TOTAL_LANES, 9), random.randint(25, 45) / TIMEWARP, random.randint(25, 45) / TIMEWARP, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
     cars.append(car)
     car_group = pygame.sprite.RenderPlain(*cars)
   
   addIdx = addIdx + 1
+  '''
   
   print("TICK")
   for event in pygame.event.get():
