@@ -11,8 +11,8 @@ clock = pygame.time.Clock()
 TOTAL_LANES = 5
 THRESHOLD = .3
 LTORBIAS = 0
-RTOLBIAS = 0
-XLIMIT = 1920 * 2
+RTOLBIAS = .3
+XLIMIT = 1920 * 5
 EPSILON = .01
 DMG = 30
 COMFORTBRAKE = 2
@@ -68,7 +68,7 @@ class CarSprite(pygame.sprite.Sprite):
   #We claim this is valid (with regards to possesing a lane) since people (hopefully) use their blinker
   def update(self, deltat, carGroup, passNo):
     # SIMULATION
-    print("Updating " + self.__repr__() + ". Pass " + str(passNo))
+    #print("Updating " + self.__repr__() + ". Pass " + str(passNo))
       
     if(self.xpos <= -200 or self.ypos >= 760 or self.ypos <= -200):
       carGroup.remove(self)
@@ -85,14 +85,14 @@ class CarSprite(pygame.sprite.Sprite):
     
     if(passNo == 0):
       nears = self.findNears(carGroup)
-      print(nears)
+      #print(nears)
       
       accels = self.calcAccels(nears, carGroup)
-      print(accels)
+      #print(accels)
 
       #We can't do it this way, since we want to favor certain lanes over others
       which = accels.index(max(accels))
-      print("Desired is " + str(which))
+      #print("Desired is " + str(which))
       
       if(accels[2] >= accels[1] and accels[2] >= accels[0]):
         which = 2
@@ -109,17 +109,17 @@ class CarSprite(pygame.sprite.Sprite):
         #Merge right
         self.targetLane = self.curLane + 1
         self.curAcc = accels[2]
-        print("Switching right")
+        #print("Switching right")
       elif(which == 0 and self.isSafe(nears[0], nears[1], SAFETYCRIT)):
         #Merge left
         self.targetLane = self.curLane - 1
         self.curAcc = accels[0]
-        print("Switching left")
+        #print("Switching left")
       else:
         #Don't bother
         self.targetLane = self.curLane
         self.curAcc = accels[1]
-        print("Staying put")
+        #print("Staying put")
       
         
       self.curVel = self.curVel + self.curAcc
@@ -145,7 +145,7 @@ class CarSprite(pygame.sprite.Sprite):
         #self.curLane = self.targetLane
       
       if(self.ypos % 9 == 0):
-        self.curLane = int(round((self.ypos - TOPBUF % 150) / 9))
+        self.curLane = int(round(((self.ypos - TOPBUF) % 150) / 9))
         #print("Set curLane of " + self.name + " to " + str(self.curLane) + ", target lane is " + str(self.targetLane))
         self.targetLane = self.curLane
       
@@ -156,11 +156,11 @@ class CarSprite(pygame.sprite.Sprite):
       #print(self.ypos, int(self.ypos))
       self.rect.centery = int(self.ypos)
       
-      happiness = math.fabs(self.curVel - self.desVel)
+      self.happiness = math.fabs(self.curVel - self.desVel)
       
-      if(happiness <= 5):
+      if(self.happiness <= 5):
         self.image = pygame.image.load("Car3.png")
-      elif(happiness <= 10):
+      elif(self.happiness <= 10):
         self.image = pygame.image.load("Car2.png")
       else:
         self.image = pygame.image.load("Car1.png")
@@ -172,7 +172,7 @@ class CarSprite(pygame.sprite.Sprite):
     print(self.curVel, self.desVel)
     '''
     
-    print("Finished updating " + self.__repr__())
+    #print("Finished updating " + self.__repr__())
     if(self.curVel < 0):
       sys.exit(0)
     
@@ -356,7 +356,39 @@ class CarSprite(pygame.sprite.Sprite):
     #print("Returning false")
     return False
     
-      
+
+
+def DrawRoad(screen, startY):
+  pygame.draw.line(screen, (255, 255, 255), [0, startY], [1920, startY], 1)
+  for i in range(1, TOTAL_LANES):
+    pygame.draw.line(screen, (125, 125, 125), [0, startY + 9 * i], [1920, startY + 9 * i], 1)
+  pygame.draw.line(screen, (255, 255, 255), [0, startY + TOTAL_LANES * 9], [1920, startY + TOTAL_LANES * 9], 1)
+
+def GetLaneStats(laneNo, carGroup):
+  totalR = 0
+  totalB = 0
+  totalG = 0
+  totalCurSpeed = 0
+  totalDesSpeed = 0
+  for car in carGroup:
+    if(car.curLane != laneNo): continue
+    if(car.happiness <= 5):
+      totalG = totalG + 1
+    elif(car.happiness <= 10):
+      totalB = totalB + 1
+    else:
+      totalR = totalR + 1
+    
+    totalCurSpeed = totalCurSpeed + car.curVel
+    totalDesSpeed = totalDesSpeed + car.desVel
+    
+  totalCars = totalR + totalB + totalG
+  
+  avgCurSpeed = 0 if totalCars == 0 else totalCurSpeed / totalCars
+  avgDesSpeed = 0 if totalCars == 0 else totalDesSpeed / totalCars
+  
+  print("(R, G, B): " + str((totalR, totalG, totalB)) + "; Average Speeds (cur, des): " + str((avgCurSpeed, avgDesSpeed)))
+  
   
 # Make a couple of cars
 #img, xPos, yPos, startVel, desVel, DMG, comfortBrake, politeness, minSpace, DTH, len, maxAcc):
@@ -388,10 +420,10 @@ car_group = pygame.sprite.RenderPlain(*cars);
 
 while 1:
   # USER INPUT
-  deltat = clock.tick(30)
+  deltat = clock.tick(10)
   
   
-  if(addIdx % 5 == 0 and len(cars) < 1000):
+  if(addIdx % 1 == 0 and len(cars) < 1000):
     for i in range(5):
       startVel = random.randint(30, 50) / TIMEWARP
       #car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), random.randrange(9, 9 * TOTAL_LANES, 9), startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
@@ -400,12 +432,12 @@ while 1:
       if(car.isSafe(nears[2], None, SAFETYCRIT) and max(car.calcAccels(nears, car_group)) >= 0):
         cars.append(car)
         car_group = pygame.sprite.RenderPlain(*cars)
-        break
+        #break
   
   addIdx = addIdx + 1
   
   
-  print("TICK")
+  #print("TICK")
   for event in pygame.event.get():
     if not hasattr(event, 'key'): continue
     down = event.type == KEYDOWN
@@ -413,10 +445,20 @@ while 1:
   # RENDERING
   
   screen.fill((0,0,0))
+  
+  DrawRoad(screen, 5)
+  DrawRoad(screen, 155)
+  DrawRoad(screen, 305)
+  DrawRoad(screen, 455)
+  DrawRoad(screen, 605)
+
   car_group.update(deltat, car_group, 0)
-  print("TOCK")
+  #print("TOCK")
   car_group.update(deltat, car_group, 1)
   car_group.draw(screen)
   pygame.display.flip()
   print("")
+  for i in range(TOTAL_LANES):
+    print("Lane " + str(i) + ":")
+    GetLaneStats(i, car_group)
 
