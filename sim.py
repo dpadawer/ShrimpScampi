@@ -8,10 +8,10 @@ from pygame.locals import *
 screen = pygame.display.set_mode((1920, 760), FULLSCREEN)
 clock = pygame.time.Clock()
 
-TOTAL_LANES = 5
+TOTAL_LANES = 14
 THRESHOLD = .1
-LTORBIAS = .1
-RTOLBIAS = -.1
+LTORBIAS = 0
+RTOLBIAS = 0
 XLIMIT = 1920 * 20
 EPSILON = .01
 DMG = 2
@@ -20,10 +20,10 @@ MINSPACE = 20
 DTH = 1.5
 LENGTH = 5
 MAXACCEL = 1
-SAFETYCRIT = 100
+SAFETYCRIT = 10
 TIMEWARP = 1
 
-SPAWNTHRESHOLD = .25
+SPAWNTHRESHOLD = .65
 
 TOPBUF = 9
 
@@ -70,7 +70,7 @@ class CarSprite(pygame.sprite.Sprite):
     self.color = ((0, 255, 0))
     
   def __repr__(self):
-    return self.name + "={Pos: " + str((self.xpos, self.ypos)) + "; curVel, desVel: " + str((self.curVel, self.desVel)) + "; curLane, targetLane: " + str((self.curLane, self.targetLane)) + ", Color: " + str(self.color) + "}"
+    return self.name + "={Pos: " + str((self.xpos, self.ypos)) + "; curVel, desVel: " + str((self.curVel, self.desVel)) + "; curLane, targetLane: " + str((self.curLane, self.targetLane)) + ", Color: " + str(self.color) + ", Passing?: " + str(self.passing) + "}"
     
     
   #Problem: if we update acc, vel, and pos all in one pass, there is simultaneousness being removed
@@ -109,13 +109,14 @@ class CarSprite(pygame.sprite.Sprite):
       accels[0] = accels[0] + RTOLBIAS
       accels[2] = accels[2] + LTORBIAS
       
+      #print(self.name)
       #print("Modified accels:")
-      if(self.curLane == 1 and not self.passing):
-        print(accels)
+      #if(self.curLane == 1 and not self.passing):
+      #print(accels)
 
       which = accels.index(max(accels))
-      if(self.curLane == 1 and not self.passing):
-        print("Desired is " + str(which))
+      #if(self.curLane == 1 and not self.passing):
+      #print("Desired is " + str(which))
       
       if(accels[2] >= accels[1] + THRESHOLD and accels[2] >= accels[0] + THRESHOLD):
         which = 2
@@ -126,12 +127,16 @@ class CarSprite(pygame.sprite.Sprite):
 
       accels[0] = accels[0] - RTOLBIAS
       accels[2] = accels[2] - LTORBIAS
+
+      #print("Chose " + str(which))
+      
+      #print("Passing? " + str(self.passing))
       
       if(max(accels) < -20):
         car_group.remove(self)
         return
       
-      if(not self.passing and self.xpos > 300):
+      if(not self.passing):
         if(which == 2 and self.isSafe(nears[4], nears[5], SAFETYCRIT)):
           #Merge right
           self.targetLane = self.curLane + 1
@@ -148,8 +153,8 @@ class CarSprite(pygame.sprite.Sprite):
           #Don't bother
           self.targetLane = self.curLane
           self.curAcc = accels[1]
-          if(self.curLane == 1 and not self.passing):
-            print("Staying put")
+          #if(self.curLane == 1 and not self.passing):
+            #print("Staying put")
       else:
         self.curAcc = accels[1]
         
@@ -175,6 +180,7 @@ class CarSprite(pygame.sprite.Sprite):
         self.curLane = self.targetLane
         #print("Set curLane of " + self.__repr__() + " to " + str(self.curLane) + ", target lane is " + str(self.targetLane))
         self.targetLane = self.curLane
+        self.passing = False
       #else:
         #self.color = ((0, 0, 255))
         #print(self.__repr__())
@@ -211,7 +217,7 @@ class CarSprite(pygame.sprite.Sprite):
     
     #print("Finished updating " + self.__repr__())
     if(self.curVel < 0):
-      print(self.name + " has a velocity of " + str(self.curVel))
+      #print(self.name + " has a velocity of " + str(self.curVel))
       self.curVel = 0
       #sys.exit(0)      
     
@@ -295,9 +301,11 @@ class CarSprite(pygame.sprite.Sprite):
         accels[2] = self.maxAccel * self.calcAccelInt(nears[4], carGroup);
         
     if(not self.isSafe(nears[0], nears[1], self.safetyCrit)):
+      #print("left not safe")
       accels[0] = -sys.maxint
       
     if(not self.isSafe(nears[4], nears[5], self.safetyCrit)):
+      #print("right not safe")
       accels[2] = -sys.maxint
       
     return accels
@@ -430,12 +438,24 @@ def DumpAll(carGroup, curTime):
   
 # Make a couple of cars
 #img, xPos, yPos, startVel, desVel, DMG, comfortBrake, politeness, minSpace, DTH, len, maxAcc):
-
-#car1 = CarSprite('car1.png', 50, 18, 30, 35, 10, 3, 1, 5, 1.5, 10, 1, "Car1") #Red
-#car2 = CarSprite('car2.png', 100, 18, 24, 35, 10, 3, 1, 5, 1.5, 10, 1, "Car2") #Blue
-#car3 = CarSprite('car3.png', 150, 18, 21, 25, 10, 3, 1, 5, 1.5, 10, 1, "Car3") #Green
-#cars = [car1, car2, car3]
+'''
+car1 = CarSprite('car1.png', 50, TOTAL_LANES * 9, 30, 45, 10, 3, 1, 5, 1.5, 10, 1, "Car1") #Red
+car2 = CarSprite('car2.png', 75, TOTAL_LANES * 9, 24, 35, 10, 3, 1, 5, 1.5, 10, 1, "Car2") #Blue
+car3 = CarSprite('car3.png', 100, TOTAL_LANES * 9, 21, 25, 10, 3, 1, 5, 1.5, 10, 1, "Car3") #Green
+cars = [car1, car2, car3]
 #cars = [car1]
+'''
+
+'''
+car1 = CarSprite('car' + str(random.randint(1,3)) + ".png", 50, 9 * TOTAL_LANES, 30, 45, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car1")
+car2 = CarSprite('car' + str(random.randint(1,3)) + ".png", 75, 9 * TOTAL_LANES, 30, 35, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car2")
+car3 = CarSprite('car' + str(random.randint(1,3)) + ".png", 100, 9 * TOTAL_LANES, 30, 24, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car3")
+car4 = CarSprite('car' + str(random.randint(1,3)) + ".png", 50, 9 * (TOTAL_LANES - 1), 30, 45, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car4")
+car5 = CarSprite('car' + str(random.randint(1,3)) + ".png", 75, 9 * (TOTAL_LANES - 1), 30, 35, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car5")
+car6 = CarSprite('car' + str(random.randint(1,3)) + ".png", 100, 9 * (TOTAL_LANES - 1), 30, 25, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car6")
+
+cars = [car1, car2, car3, car4, car5, car6]
+'''
 
 '''
 car1 = CarSprite('car1.png', 50, 14, 25, 60, 2, 3, 1, 5, 1.5, 1, 1, "Car1") #Red
@@ -463,7 +483,7 @@ while 1:
   deltat = clock.tick(10)  
   
   '''
-  if(addIdx % 1 == 0 and len(cars) < 1000):
+  if(addIdx % 2 == 0 and len(cars) < 1000):
     for i in range(TOTAL_LANES - 2, TOTAL_LANES):
       startVel = random.randint(30, 50) / TIMEWARP
       #car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), random.randrange(9, 9 * TOTAL_LANES, 9), startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
@@ -477,22 +497,23 @@ while 1:
         #print("Added car:")
         #print(car.__repr__())
   '''
-
-  if(addIdx % 10 == 0 and len(cars) < 1000):
-    for i in range(1, TOTAL_LANES):
-      for j in range(1, 5):
+  
+  if(addIdx % 3 == 0 and len(cars) < 1000):
+    for i in range(0, TOTAL_LANES):
+      for j in range(0, 1):
         startVel = random.randint(30, 33) / TIMEWARP
         #car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), random.randrange(9, 9 * TOTAL_LANES, 9), startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
         #car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), 9 * TOTAL_LANES, startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
-        car = CarSprite('car' + str(random.randint(1,3)) + ".png", j * 50, 9 * (i + 1), startVel, startVel + (random.randint(-3, 3) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
+        car = CarSprite('car' + str(random.randint(1,3)) + ".png", j * 50, 9 * (i + 1), startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
        
-        #nears = car.findNears(car_group)
-        #if(car.isSafe(nears[2], None, SAFETYCRIT) and max(car.calcAccels(nears, car_group)) >= 0):
-        if(random.random() >= SPAWNTHRESHOLD):
-          cars.append(car)
-          car_group = pygame.sprite.RenderPlain(*cars)
+        nears = car.findNears(car_group)
+        if(car.isSafe(nears[0], None, SAFETYCRIT) and car.isSafe(nears[2], None, SAFETYCRIT) and car.isSafe(nears[4], None, SAFETYCRIT) and max(car.calcAccels(nears, car_group)) >= 0):
+          if(random.random() >= SPAWNTHRESHOLD):
+            cars.append(car)
+            car_group = pygame.sprite.RenderPlain(*cars)
           #print("Added car:")
           #print(car.__repr__())
+  
   
   #print("TICK")
   for event in pygame.event.get():
@@ -513,10 +534,10 @@ while 1:
   #print("TOCK")
   car_group.update(deltat, car_group, 1, screen)
   
-  '''
-  for car in car_group:
-    print(car.__repr__())
-  '''
+  
+  #for car in car_group:
+    #print(car.__repr__())
+  
   
   car_group.update(deltat, car_group, 2, screen)
   pygame.display.flip()
