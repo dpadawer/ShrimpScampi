@@ -8,7 +8,7 @@ from pygame.locals import *
 screen = pygame.display.set_mode((1920, 760), FULLSCREEN)
 clock = pygame.time.Clock()
 
-TOTAL_LANES = 1
+TOTAL_LANES = 2
 THRESHOLD = .1
 LTORBIAS = 0
 RTOLBIAS = 0
@@ -23,7 +23,9 @@ MAXACCEL = 1
 SAFETYCRIT = 10
 TIMEWARP = 1
 
-SPAWNTHRESHOLD = .65
+CRASHES = 0
+
+SPAWNTHRESHOLD = .2
 
 TOPBUF = 9
 
@@ -209,11 +211,13 @@ class CarSprite(pygame.sprite.Sprite):
         self.color = ((255, 0, 0))
       
       if(self.crashed):
+        #print("That's a crash!")
         self.color = ((255, 255, 255))
         self.curVel = self.curVel / 2
         tmp = self.curLane
         self.curLane = self.targetLane
         self.targetLane = tmp
+        
         
       pygame.draw.rect(screen, self.color, self.rect)  
     
@@ -437,6 +441,12 @@ def DumpAll(carGroup, curTime):
   for car in carGroup:
     print(str((curTime, car.name, car.curLane, car.targetLane, car.curVel, car.desVel, car.xpos, car.ypos, car.curAcc)))
   
+def CountCrashes(carGroup):
+  toRet = 0
+  for car in carGroup:
+    if(car.crashed):
+      toRet = toRet + 1
+  return toRet
   
 # Make a couple of cars
 #img, xPos, yPos, startVel, desVel, DMG, comfortBrake, politeness, minSpace, DTH, len, maxAcc):
@@ -448,65 +458,23 @@ cars = [car1, car2, car3]
 #cars = [car1]
 '''
 
-'''
-car1 = CarSprite('car' + str(random.randint(1,3)) + ".png", 50, 9 * TOTAL_LANES, 30, 45, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car1")
-car2 = CarSprite('car' + str(random.randint(1,3)) + ".png", 75, 9 * TOTAL_LANES, 30, 35, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car2")
-car3 = CarSprite('car' + str(random.randint(1,3)) + ".png", 100, 9 * TOTAL_LANES, 30, 24, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car3")
-car4 = CarSprite('car' + str(random.randint(1,3)) + ".png", 50, 9 * (TOTAL_LANES - 1), 30, 45, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car4")
-car5 = CarSprite('car' + str(random.randint(1,3)) + ".png", 75, 9 * (TOTAL_LANES - 1), 30, 35, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car5")
-car6 = CarSprite('car' + str(random.randint(1,3)) + ".png", 100, 9 * (TOTAL_LANES - 1), 30, 25, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car6")
-
-cars = [car1, car2, car3, car4, car5, car6]
-'''
-
-'''
-car1 = CarSprite('car1.png', 50, 14, 25, 60, 2, 3, 1, 5, 1.5, 1, 1, "Car1") #Red
-car2 = CarSprite('car2.png', 100, 14, 25, 30, 2, 3, 1, 5, 1.5, 1, 1, "Car2") #Blue
-car3 = CarSprite('car3.png', 150, 14, 25, 30, 2, 3, 1, 5, 1.5, 1, 1, "Car3") #Green
-
-
-
-'''
-'''
-
-for i in range(10):
-  car = CarSprite('car' + str(random.randint(1,3)) + ".png", 50 * i + 50, TOPBUF + (TOTAL_LANES - 1) * 9, 25, 54 - 3 * i, DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(i))
-  print("Created " + car.name + " with speed " + str(car.curVel) + " and des speed " + str(car.desVel) + " at pos " + str((car.xpos, car.ypos)))
-  cars.append(car)
-'''
-
 cars = []
 car_group = pygame.sprite.RenderPlain(*cars);
 
 curTime = 0
+crashes = 0
 
 while 1:
   # USER INPUT
   deltat = clock.tick(10)  
   
-  '''
-  if(addIdx % 2 == 0 and len(cars) < 1000):
-    for i in range(TOTAL_LANES - 2, TOTAL_LANES):
-      startVel = random.randint(30, 50) / TIMEWARP
-      #car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), random.randrange(9, 9 * TOTAL_LANES, 9), startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
-      #car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), 9 * TOTAL_LANES, startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
-      car = CarSprite('car' + str(random.randint(1,3)) + ".png", 0, 9 * (i + 1), startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
-     
-      nears = car.findNears(car_group)
-      if(car.isSafe(nears[2], None, SAFETYCRIT) and max(car.calcAccels(nears, car_group)) >= 0):
-        cars.append(car)
-        car_group = pygame.sprite.RenderPlain(*cars)
-        #print("Added car:")
-        #print(car.__repr__())
-  '''
-  
-  if(addIdx % 3 == 0 and len(cars) < 1000):
+  if(addIdx % 1 == 0 and len(cars) < 1000):
     for i in range(0, TOTAL_LANES):
       for j in range(0, 1):
-        startVel = random.randint(30, 33) / TIMEWARP
+        startVel = random.randint(30, 35) / TIMEWARP
         #car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), random.randrange(9, 9 * TOTAL_LANES, 9), startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
         #car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), 9 * TOTAL_LANES, startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
-        car = CarSprite('car' + str(random.randint(1,3)) + ".png", j * 50, 9 * (i + 1), startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
+        car = CarSprite('car' + str(random.randint(1,3)) + ".png", j * 50, 9 * (i + 1), startVel, startVel + (random.randint(0, 5) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
        
         nears = car.findNears(car_group)
         if(car.isSafe(nears[0], None, SAFETYCRIT) and car.isSafe(nears[2], None, SAFETYCRIT) and car.isSafe(nears[4], None, SAFETYCRIT) and max(car.calcAccels(nears, car_group)) >= 0):
@@ -533,25 +501,17 @@ while 1:
   DrawRoad(screen, 605)
 
   car_group.update(deltat, car_group, 0, screen)
-  #print("TOCK")
   car_group.update(deltat, car_group, 1, screen)
-  
-  
-  #for car in car_group:
-    #print(car.__repr__())
-  
-  
   car_group.update(deltat, car_group, 2, screen)
   pygame.display.flip()
-  #print("")
-  '''
-  for i in range(TOTAL_LANES):
-    print("Lane " + str(i) + ":")
-    GetLaneStats(i, car_group)
-  '''
-  #DumpAll(car_group, curTime)
+
+  CRASHES = CRASHES + CountCrashes(car_group)
+
+  DumpAll(car_group, curTime)
+  
   curTime = curTime + 1
-  #if(curTime >= 500):
-  #  sys.exit(0)
+  if(curTime >= 500):
+    print("Total crashes: " + str(CRASHES))
+    sys.exit(0)
   
   addIdx = addIdx + 1
