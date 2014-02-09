@@ -12,7 +12,7 @@ TOTAL_LANES = 5
 THRESHOLD = .3
 LTORBIAS = 0
 RTOLBIAS = .3
-XLIMIT = 1920 * 5
+XLIMIT = 1920 * 20
 EPSILON = .01
 DMG = 30
 COMFORTBRAKE = 2
@@ -321,7 +321,7 @@ class CarSprite(pygame.sprite.Sprite):
     salpha = ahead.xpos - self.xpos - ahead.length
       
     if(salpha == 0):
-      print("calcAccelInt Returning -sys.maxint")
+      #print("calcAccelInt Returning -sys.maxint")
       return -sys.maxint
     
     freeAccel = self.calcAccelFree()
@@ -390,6 +390,11 @@ def GetLaneStats(laneNo, carGroup):
   print("(R, G, B): " + str((totalR, totalG, totalB)) + "; Average Speeds (cur, des): " + str((avgCurSpeed, avgDesSpeed)))
   
   
+def DumpAll(carGroup, curTime):
+  for car in carGroup:
+    print(str((curTime, car.name, car.curLane, car.targetLane, car.curVel, car.desVel, car.xpos, car.ypos, car.curAcc)))
+  
+  
 # Make a couple of cars
 #img, xPos, yPos, startVel, desVel, DMG, comfortBrake, politeness, minSpace, DTH, len, maxAcc):
 
@@ -417,6 +422,8 @@ for i in range(10):
 
 cars = []
 car_group = pygame.sprite.RenderPlain(*cars);
+
+curTime = 0
 
 while 1:
   # USER INPUT
@@ -458,7 +465,12 @@ while 1:
   car_group.draw(screen)
   pygame.display.flip()
   print("")
+  '''
   for i in range(TOTAL_LANES):
     print("Lane " + str(i) + ":")
     GetLaneStats(i, car_group)
-
+  '''
+  DumpAll(car_group, curTime)
+  curTime = curTime + 1
+  if(curTime >= 1500):
+    sys.exit(0)
