@@ -8,10 +8,10 @@ from pygame.locals import *
 screen = pygame.display.set_mode((1920, 760), FULLSCREEN)
 clock = pygame.time.Clock()
 
-TOTAL_LANES = 4
+TOTAL_LANES = 1
 THRESHOLD = .1
-LTORBIAS = .1
-RTOLBIAS = -.1
+LTORBIAS = 0
+RTOLBIAS = 0
 XLIMIT = 1920 * 20
 EPSILON = .01
 DMG = 2
@@ -20,16 +20,14 @@ MINSPACE = 20
 DTH = 1.5
 LENGTH = 5
 MAXACCEL = 1
-SAFETYCRIT = 25
+SAFETYCRIT = 10
 TIMEWARP = 1
 
-SPAWNTHRESHOLD = 0
+SPAWNTHRESHOLD = .65
 
 TOPBUF = 9
 
 addIdx = 0
-
-killGroup = []
 
 #Since a car is 5 pixels wide, we will define a lane as 9 pixels
 #Lane centers will start at y = 9 (then 18, 27, 36...)
@@ -83,32 +81,20 @@ class CarSprite(pygame.sprite.Sprite):
     #print("Updating " + self.__repr__() + ". Pass " + str(passNo))
       
     if(self.xpos <= -200 or self.ypos >= 760 or self.ypos <= -200):
+      carGroup.remove(self)
+      self.kill()
       return
       
     if(self.xpos >= XLIMIT):
-      killGroup.append(self)
+      
+      carGroup.remove(self)
       return
       '''
       self.xpos = self.xpos - XLIMIT
       self.ypos = self.ypos + 150
       '''
       
-    if(self.crashed):
-      self.curVel = 1
-      #self.ypos = self.curLane * 9 + TOPBUF
-      tmp = self.targetLane
-      self.targetLane = self.curLane
-      self.curLane = tmp
-      self.crashed = False
-      '''
-      print(str((self.curLane, self.targetLane)))
-      self.color = ((255, 255, 255))
-      self.rect = ((0, 0), (0, 0))
-      carGroup.remove(self)
-      self.kill()
-      return
-      '''
-    elif(passNo == 0):
+    if(passNo == 0):
       self.color = ((0, 255, 0))
     
       nears = self.findNears(carGroup)
@@ -224,6 +210,10 @@ class CarSprite(pygame.sprite.Sprite):
       
       if(self.crashed):
         self.color = ((255, 255, 255))
+        self.curVel = self.curVel / 2
+        tmp = self.curLane
+        self.curLane = self.targetLane
+        self.targetLane = tmp
         
       pygame.draw.rect(screen, self.color, self.rect)  
     
@@ -231,8 +221,6 @@ class CarSprite(pygame.sprite.Sprite):
     if(self.curVel < 0):
       #print(self.name + " has a velocity of " + str(self.curVel))
       self.curVel = 0
-      killGroup.append(self)
-      return
       #sys.exit(0)      
     
     if(math.fabs(self.curVel) > 1000000):
@@ -449,11 +437,6 @@ def DumpAll(carGroup, curTime):
   for car in carGroup:
     print(str((curTime, car.name, car.curLane, car.targetLane, car.curVel, car.desVel, car.xpos, car.ypos, car.curAcc)))
   
-def CleanCrashes(killGroup, carGroup):
-  for car in killGroup:
-    carGroup.remove(car)
-    car.kill()
-  killGroup = []
   
 # Make a couple of cars
 #img, xPos, yPos, startVel, desVel, DMG, comfortBrake, politeness, minSpace, DTH, len, maxAcc):
@@ -523,7 +506,7 @@ while 1:
         startVel = random.randint(30, 33) / TIMEWARP
         #car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), random.randrange(9, 9 * TOTAL_LANES, 9), startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
         #car = CarSprite('car' + str(random.randint(1,3)) + ".png", random.randrange(25, 75, 25), 9 * TOTAL_LANES, startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
-        car = CarSprite('car' + str(random.randint(1,3)) + ".png", j * 50, 9 * (i + 1), startVel, startVel + (random.randint(0, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
+        car = CarSprite('car' + str(random.randint(1,3)) + ".png", j * 50, 9 * (i + 1), startVel, startVel + (random.randint(-10, 10) / TIMEWARP), DMG, COMFORTBRAKE, 1, MINSPACE, DTH, LENGTH, MAXACCEL, "Car" + str(len(cars)))
        
         nears = car.findNears(car_group)
         if(car.isSafe(nears[0], None, SAFETYCRIT) and car.isSafe(nears[2], None, SAFETYCRIT) and car.isSafe(nears[4], None, SAFETYCRIT) and max(car.calcAccels(nears, car_group)) >= 0):
@@ -568,8 +551,7 @@ while 1:
   '''
   #DumpAll(car_group, curTime)
   curTime = curTime + 1
-  if(curTime >= 500):
-    sys.exit(0)
+  #if(curTime >= 500):
+  #  sys.exit(0)
   
   addIdx = addIdx + 1
-  CleanCrashes(killGroup, car_group)
