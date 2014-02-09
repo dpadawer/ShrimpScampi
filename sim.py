@@ -8,7 +8,7 @@ from pygame.locals import *
 screen = pygame.display.set_mode((1920, 760), FULLSCREEN)
 clock = pygame.time.Clock()
 
-TOTAL_LANES = 2
+TOTAL_LANES = 3
 THRESHOLD = .1
 LTORBIAS = 0
 RTOLBIAS = 0
@@ -25,7 +25,7 @@ TIMEWARP = 1
 
 CRASHES = 0
 
-SPAWNTHRESHOLD = .2
+SPAWNTHRESHOLD = .95
 
 TOPBUF = 9
 
@@ -495,10 +495,10 @@ while 1:
   screen.fill((0,0,0))
   
   DrawRoad(screen, 5)
-  DrawRoad(screen, 155)
-  DrawRoad(screen, 305)
-  DrawRoad(screen, 455)
-  DrawRoad(screen, 605)
+  #DrawRoad(screen, 155)
+  #DrawRoad(screen, 305)
+  #DrawRoad(screen, 455)
+  #DrawRoad(screen, 605)
 
   car_group.update(deltat, car_group, 0, screen)
   car_group.update(deltat, car_group, 1, screen)
