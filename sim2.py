@@ -13,30 +13,30 @@ clock = pygame.time.Clock()
 LANEWIDTH = 9
 UPPERBUF = 9
 
-TOTALLANES = 75
+TOTALLANES = 5
 XLIMIT = 50000
 
 #Merging stuff
 THRESHOLD = .1
-LTORBIAS = .1
-RTOLBIAS = -.1
+LTORBIAS = 10
+RTOLBIAS = 0
 
 #Spawn stuff
-SPAWNPERCENT = .85
-BASESPEED = 30
-SPEEDVAR = 10
+SPAWNPERCENT = 1
+BASESPEED = 0
+SPEEDVAR = 20
 
 #Values from papers
 #Note: Length is 12 for display purposes, thus all other distance constants is also multiplied by 3
 #These values specifically from http://www.itrn.ie/uploads/sesc3_id153.pdf
 COMFBRAKE = 6
-POLITENESS = .1
+POLITENESS = 1
 MINSPACE = 6
 DESTIMEHEADWAY = 1.2
 LENGTH = 12
 HEIGHT = 6
 MAXACC = 4.5
-SAFETYCRIT = 150
+SAFETYCRIT = LENGTH * 4
 
 #COLORS
 GREEN = ((0, 255, 0))
@@ -45,6 +45,9 @@ BLUE = ((0, 0, 255))
 BLACK = ((0, 0, 0))
 WHITE = ((255, 255, 255))
 GRAY = ((125, 125, 125))
+
+MergeCount = 0
+CollisionCount = 0
 
 #HELPER FUNCTIONS
 def GetLane(ypos):
@@ -101,8 +104,10 @@ class CarSprite(pygame.sprite.Sprite):
     #Update accel, then vel, the pos
     #print("Updating " + self.__repr__())
     
-    if(self.curVel < 0 or self.xpos < -100 or self.xpos > XLIMIT):
+    if(self.xpos < -100 or self.xpos > XLIMIT):
       #print(self.__repr__())
+      carGroup.remove(self)
+      self.rect = pygame.Rect(0, 0, 0, 0)
       self = None
       return
     
@@ -153,6 +158,10 @@ class CarSprite(pygame.sprite.Sprite):
       sortedOrder = [x[1] for x in reversed(sortedTogether)]
       
       #print(sortedOrder)
+
+      #if(nears[0].passing or nears[1].passing or nears[2].passing or nears[3].passing or nears[4].passing or nears[5].passing):
+      #if(nears[1].passing or nears[3].passing or nears[5].passing):
+        #x = [1]
       
       for x in sortedOrder:
         #Check if we can make the merge. If we can, do it and exit the loop
@@ -194,6 +203,8 @@ class CarSprite(pygame.sprite.Sprite):
       if(GetLane(self.ypos) == self.targetLane and CompletelyInLane(self.ypos)):
         self.curLane = self.targetLane
         self.passing = False
+        global MergeCount
+        MergeCount += 1
     
     self.curVel += self.curAccel
     self.xpos += self.curVel
@@ -201,6 +212,17 @@ class CarSprite(pygame.sprite.Sprite):
     collisions = pygame.sprite.spritecollide(self, carGroup, False)
     if(len(collisions) > 1):
       self.color = RED
+      global CollisionCount
+      CollisionCount += 1
+      #print(self.__repr__())
+      self.rect = pygame.Rect(0, 0, 0, 0)
+      self.xpos = XLIMIT + 5
+      self.ypos = 1000
+      self = None
+      return
+    else:
+      tmp = (math.fabs(self.curVel - self.desVel) / self.desVel)
+      self.color = ((0, min(max(255 - int(255 * tmp), 0), 255), min(max(0, int(255 * tmp)), 255)))
     
     #print("Finished updating " + self.__repr__())
     
@@ -214,7 +236,7 @@ class CarSprite(pygame.sprite.Sprite):
     pygame.draw.rect(screen, self.color, self.rect)
     
   def calcAccel(self, ahead):
-    if(self.name == "dummy"):
+    if(self.name == "dummy" or ahead == None):
       return 0
     vav0d = (self.curVel / self.desVel) ** 4
     #print("vav0d: " + str(vav0d))
@@ -224,6 +246,9 @@ class CarSprite(pygame.sprite.Sprite):
     sStarTerm3Num = self.curVel - ahead.curVel
     sStarTerm3Denom = 2 * self.desTimeHeadway * math.sqrt(self.maxAccel * self.comfBrake)
     sStarTerm3 = sStarTerm3Num / sStarTerm3Denom
+    
+    if(sStarTerm3 >= 50):
+      return self.maxAccel
     
     sAlpha = ahead.xpos - self.xpos - ahead.length
     if(sAlpha == 0):
@@ -275,44 +300,60 @@ class CarSprite(pygame.sprite.Sprite):
     return nears
 
   def isSafe(self, ahead, behind):
+    if(ahead == None and behind == None):
+      return True
+    elif(ahead == None):
+      return self.xpos - behind.xpos >= self.safetyCrit
+    elif(behind == None):
+      return ahead.xpos - self.xpos >= self.safetyCrit
+    else:  
+      return ((ahead.xpos - self.xpos >= self.safetyCrit) and (self.xpos - behind.xpos >= self.safetyCrit))
+    
+  def oldisSafe(self, ahead, behind):
     #print("new set")
     #print("In is safe for " + self.__repr__())
     #print("Ahead: " + ahead.name + "; behind: " + behind.name)
     #print(ahead.__repr__())
     #Check ahead
-    sStarTerm1A = self.minSpace
-    sStarTerm2A = self.curVel * self.desTimeHeadway
-    sStarTerm3NumA = self.curVel - ahead.curVel
-    sStarTerm3DenomA = 2 * self.desTimeHeadway * math.sqrt(self.maxAccel * self.comfBrake)
-    sStarTerm3A = sStarTerm3NumA / sStarTerm3DenomA
+    if(ahead != None):
+      sStarTerm1A = self.minSpace
+      sStarTerm2A = self.curVel * self.desTimeHeadway
+      sStarTerm3NumA = self.curVel - ahead.curVel
+      sStarTerm3DenomA = 2 * self.desTimeHeadway * math.sqrt(self.maxAccel * self.comfBrake)
+      sStarTerm3A = sStarTerm3NumA / sStarTerm3DenomA
+      
+      if(sStarTerm3A >= 50):
+        return True
+      
+      sStarA = sStarTerm1A + sStarTerm2A * math.exp(sStarTerm3A)
+      
+      if(sStarA < self.safetyCrit):
+        return false;
+      #print("sStarA: " + str(sStarA))
     
-    if(sStarTerm3A >= 50):
-      return True
+    if(behind != None):
+      #Check behind
+      sStarTerm1B = self.minSpace
+      #print(sStarTerm1B)
+      sStarTerm2B = self.curVel * self.desTimeHeadway
+      #print(sStarTerm2B)
+      sStarTerm3NumB = self.curVel - behind.curVel
+      sStarTerm3DenomB = 2 * self.desTimeHeadway * math.sqrt(self.maxAccel * self.comfBrake)
+      sStarTerm3B = sStarTerm3NumB / sStarTerm3DenomB
+      #print(sStarTerm3B)
+      
+      if(sStarTerm3B >= 50):
+        return True
+      
+      sStarB = sStarTerm1B + sStarTerm2B * math.exp(sStarTerm3B)
+      #print("sStarB: " + str(sStarB))
+      
+      if(sStarB < self.safetyCrit):
+        return false;
     
-    sStarA = sStarTerm1A + sStarTerm2A * math.exp(sStarTerm3A)
-    #print("sStarA: " + str(sStarA))
-    
-    #Check behind
-    sStarTerm1B = self.minSpace
-    #print(sStarTerm1B)
-    sStarTerm2B = self.curVel * self.desTimeHeadway
-    #print(sStarTerm2B)
-    sStarTerm3NumB = self.curVel - behind.curVel
-    sStarTerm3DenomB = 2 * self.desTimeHeadway * math.sqrt(self.maxAccel * self.comfBrake)
-    sStarTerm3B = sStarTerm3NumB / sStarTerm3DenomB
-    #print(sStarTerm3B)
-    
-    if(sStarTerm3B >= 50):
-      return True
-    
-    sStarB = sStarTerm1B + sStarTerm2B * math.exp(sStarTerm3B)
-    #print("sStarB: " + str(sStarB))
-    
-    if((sStarA >= self.safetyCrit or ahead.name == "dummy") and (sStarB >= self.safetyCrit or behind.name == "dummy")):
-      return True
-    
-    return False
-    
+    #if((sStarA >= self.safetyCrit * self.curVel or ahead.name == "dummy") and (sStarB >= self.safetyCrit * self.curVel or behind.name == "dummy")):
+    return True
+      
 #START UP SPRITES
 #self, x, y, startVel, desVel, comfBrake, p, minSpace, desiredTime, length, height, maxAcc, safetyCrit, name):
 #car1 = CarSprite(50, GetYForLane(1), 10, 120, 2, .5, 2, 1.2, 4, 2, 1.5, 25, "car1")
@@ -335,6 +376,7 @@ carGroup = pygame.sprite.RenderPlain(*cars)
   
 curTime = 0
 totalSpawned = 0
+
     
 #GAME LOOP
 while 1:  
@@ -352,7 +394,9 @@ while 1:
   if(curTime % 5 == 0):
     for i in range(0, TOTALLANES):
       vel = random.randrange(BASESPEED, BASESPEED + SPEEDVAR)
-      newCar = CarSprite(25, GetYForLane(i), 0, vel + random.randrange(0, SPEEDVAR), COMFBRAKE, POLITENESS, MINSPACE, DESTIMEHEADWAY, LENGTH, HEIGHT, MAXACC, SAFETYCRIT, "car" + str(totalSpawned))
+      newCar = CarSprite(25, GetYForLane(i), 0, vel + random.randrange(5, SPEEDVAR), COMFBRAKE, POLITENESS, MINSPACE, DESTIMEHEADWAY, LENGTH, HEIGHT, MAXACC, SAFETYCRIT, "car" + str(totalSpawned))
+      nears = newCar.calcNears(carGroup)
+      # and newCar.isSafe(nears[2], nears[3])
       if(random.random() <= SPAWNPERCENT):
         cars.append(newCar)
         totalSpawned += 1
@@ -361,7 +405,11 @@ while 1:
   carGroup = pygame.sprite.RenderPlain(*cars)
   carGroup.update(carGroup)
   
+  if(curTime % 25 == 0):
+    print("Time: " + str(curTime) + ", merges: " + str(MergeCount) + ", collisions: " + str(CollisionCount))
+  
   clock.tick(10)
   curTime += 1
   pygame.display.flip()
+  
   #print("\n")
