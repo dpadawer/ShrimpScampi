@@ -17,7 +17,7 @@ TOTALLANES = 5
 XLIMIT = 50000
 
 #Merging stuff
-THRESHOLD = .1
+THRESHOLD = .5
 LTORBIAS = 10
 RTOLBIAS = 0
 
@@ -30,7 +30,7 @@ SPEEDVAR = 20
 #Note: Length is 12 for display purposes, thus all other distance constants is also multiplied by 3
 #These values specifically from http://www.itrn.ie/uploads/sesc3_id153.pdf
 COMFBRAKE = 6
-POLITENESS = 1
+POLITENESS = 0
 MINSPACE = 6
 DESTIMEHEADWAY = 1.2
 LENGTH = 12
@@ -58,6 +58,11 @@ def GetYForLane(laneNo):
   
 def CompletelyInLane(ypos):
   return (ypos - UPPERBUF) % LANEWIDTH == 0
+  
+def DumpAll(carGroup, curTime):
+  for car in carGroup:
+    if(car.name == "dummy"): continue
+    print(str(curTime) + ", " + car.name +  ", " + str(car.xpos) + ", " + str(car.ypos) + ", " + str(car.curVel) + ", " + str(car.desVel) + ", " + str(car.curAccel) + ", " + str(car.curLane) + ", " + str(car.targetLane))
   
 def DrawLanes(offset):
   pygame.draw.line(screen, WHITE, [0, UPPERBUF + offset], [DISPLAYWIDTH, UPPERBUF + offset], 1)
@@ -391,7 +396,7 @@ while 1:
   screen.fill(BLACK)
   DrawLanes(7)
   #Add any new cars
-  if(curTime % 5 == 0):
+  if(curTime % 3 == 0):
     for i in range(0, TOTALLANES):
       vel = random.randrange(BASESPEED, BASESPEED + SPEEDVAR)
       newCar = CarSprite(25, GetYForLane(i), 0, vel + random.randrange(5, SPEEDVAR), COMFBRAKE, POLITENESS, MINSPACE, DESTIMEHEADWAY, LENGTH, HEIGHT, MAXACC, SAFETYCRIT, "car" + str(totalSpawned))
@@ -407,6 +412,7 @@ while 1:
   
   if(curTime % 25 == 0):
     print("Time: " + str(curTime) + ", merges: " + str(MergeCount) + ", collisions: " + str(CollisionCount))
+    #DumpAll(carGroup, curTime)
   
   clock.tick(10)
   curTime += 1
