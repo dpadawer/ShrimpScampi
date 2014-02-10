@@ -1,0 +1,3 @@
+Check the safety of a lane before calculating the accel.
+Should remove a bunch of those issues.
+Hopefully.
